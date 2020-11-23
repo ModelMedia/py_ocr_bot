@@ -1,5 +1,7 @@
 import os
 import requests
+import json
+
 import log_srv
 
 from dotenv import load_dotenv
@@ -90,6 +92,37 @@ def ocr_space_url(url, overlay=False,  language='eng', ocrengine=1):
     return r.content.decode()
 
 
+def check_response_ocr(response_json):
+    """
+    check value response of ocr service
+    """
+
+    response_data = json.loads(response_json)
+
+    data_ocr = {
+      'ocr_code': 'Parsed Successfully',
+      'ocr_exit_code': response_data['OCRExitCode'],
+      'fileparse_exit_code': response_data['ParsedResults'][0]['FileParseExitCode'],
+      'is_errored_onprocessing': response_data['IsErroredOnProcessing'],
+      'processing_time': response_data['ProcessingTimeInMilliseconds'],
+      'error_message': response_data['ParsedResults'][0]['ErrorMessage'],
+      'error_details': response_data['ParsedResults'][0]['ErrorDetails'],
+      'parsed_text': response_data['ParsedResults'][0]['ParsedText'],
+    }
+
+    data_ocr['ocr_exit_code'] == 2:
+        data_ocr['ocr_code'] = 'Parsed Partially (Only few pages out of all the pages parsed successfully)'
+    data_ocr['ocr_exit_code'] == 3:
+        data_ocr['ocr_code'] = 'Image / All the PDF pages failed parsing (This happens mainly because the OCR engine fails to parse an image)'
+    data_ocr['ocr_exit_code'] >= 4:
+        data_ocr['ocr_code'] = 'Error occurred when attempting to parse'
+
+    return data_ocr
+
+
 if __name__ == "__main__":
     # print(ocr_space_file(filename='E:/temp/ru1.png', language='rus'))
-    print(ocr_space_url(url='http://dl.a9t9.com/ocrbenchmark/eng.png'))
+    test = check_response_ocr(ocr_space_url(url='http://dl.a9t9.com/ocrbenchmark/eng.png'))
+
+    for key, value in test.items():
+        print('key: {}, value: {}'.format(key, value))
