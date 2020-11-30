@@ -1,9 +1,12 @@
 import os
 from dotenv import load_dotenv
-from telethon import TelegramClient, events, errors
+from telethon import TelegramClient, events, errors, Button
 from ocr import ocr_space_file, ocr_space_url, ocr_response_data
 
 import log_srv
+from settings import get_default_settings
+from utills import set_lang, settings_msg, settings_buttons_inline, language_buttons_inline, menu_button_inline
+from file_srv import str_to_file
 
 load_dotenv()
 logger = log_srv.get_logger(__name__)
@@ -13,34 +16,25 @@ BOT_TOKEN = os.getenv('BOT_TOKEN')
 APP_API_ID = os.getenv('APP_API_ID')
 APP_API_HASH = os.getenv('APP_API_HASH')
 
+srv_settings = get_default_settings()
+logger.info('default srv_settings: ' + str(srv_settings))
+
+list_lang_btn_inline = language_buttons_inline()
+
+
 bot = TelegramClient('bot', APP_API_ID, APP_API_HASH).start(bot_token=BOT_TOKEN)
+
 
 @bot.on(events.NewMessage(pattern='/start'))
 async def start(event):
     """Send a message wnen the command /start is issued"""
+
     try:
-        await event.respond(
-            """Hi! I am bot for OCR on pictures and pdf files.\nSend me image/pdf file with text.\nI will process the file. And if the OCR service finds the text there, \nthen you will get the result of its work.
-            """)
+        await event.respond(settings_msg(srv_settings), buttons=settings_buttons_inline())
+
         logger.info('event.respond on /start')
     except Exception as inst_exception:
         logger.warning(inst_exception)
-    # else:
-        # raise events.StopPropagation
-
-
-# @bot.on(events.UserUpdate)
-# async def uploading_handler(event):
-#     """userUpdate"""
-#     # If someone is uploading, say something
-#     client = event.client
-#     print('event.client: ', client)
-#     if event.uploading:
-#         if event.photo:
-#             # await client.send_message(event.user_id, 'What are you sending?')
-#             await event.respond(event.user_id, 'What photo are you sending?')
-#         else:
-#             await event.respond(event.user_id, 'I receive only photo or pdf!')
 
 
 @bot.on(events.NewMessage)
@@ -50,35 +44,157 @@ async def rec_file(event):
        image/gif, image/bmp, image/tiff.
         The maximum length for a message is 35,000 bytes or 4,096 characters
     """
+    allowed_file_types = ['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/bmp', 'image/tiff']
+
     logger.info('event.NewMessage')
     print(event)
+
     e_msg = event.message
+    # msg_id = e_msg.id
+    # logger.info('msg_id: ' + str(msg_id))
+    # chat = await event.get_chat()
+    # logger.info('event.chat: ' + str(chat))
+    # sender = await event.get_sender()
+    # logger.info('event.sender: ' + str(sender))
+    # logger.info('event.chat_id: ' + str(event.chat_id))
+    # logger.info('event.sender_id: ' + str(event.sender_id))
+    # user_id = e_msg.peer_id
+    # logger.info('user_id: ' + str(user_id))
+    # logger.info('event_client: ' + str(event.client))
+
     if e_msg.document:
-        print('document.mime_type:', e_msg.document.mime_type)
-    if e_msg.file:
-        f = e_msg.file
-        print('file.name:', f.name)
-    # cur_dir = os.getcwd()
-    # path = await e_msg.download_media(file='\downloads')
-    path_file = await e_msg.download_media()
-    logger.info('File saved to: ' + str(path_file))
+        logger.info('document.mime_type: ' + e_msg.document.mime_type)
 
-    # proccessing the file by servise ocr api
-    resp_ocr = ocr_space_file(path_file)
-    data_ocr = ocr_response_data(resp_ocr)
-    logger.info('result ocr - ocr_code: ' + str(data_ocr['ocr_code']))
-    logger.info('result ocr - parsed_text: \n' + str(data_ocr['parsed_text']))
     try:
-        os.remove(path_file)
-        logger.info('File remove ' + str(path_file))
-    except Exception as os_remove_exception:
-        logger.warning(os_remove_exception)
+        b=allowed_file_types.index(e_msg.document.mime_type)
+    except ValueError:
+        logger.warning(ValueError)
 
-    pars_text = data_ocr['parsed_text']
+        await event.reply('Sorry, this file type cannot be processed\nOnly these types of files can be processed: PDF, PNG, JPG(JPEG), BMP, TIF(TIFF), GIF.\nOther limits:\nFile size limit - 1 MB. PDF page limit - 3\nLimit requests to API service - 500 calls/DAY.')
+    else:
+        await event.reply('Please, wait. Just one moment ....')
 
-    #reply by parsed text
-    logger.info('reply by parsed text')
-    await event.reply('parsed text:\n' + pars_text)
+        if e_msg.file:
+            user_file = e_msg.file
+            logger.info('file.mime_type: ' + user_file.mime_type)
+            logger.info('file.name: ' + user_file.name)
+            logger.info('file.size: ' + str(user_file.size)) #size in bytes of this file.
+
+        user_file = await e_msg.download_media()
+        logger.info('File saved to: ' + str(user_file))
+
+        cur_dir = os.getcwd()
+        logger.info('File saved to cur_dir: ' + str(cur_dir))
+        # path_to_user_file = os.path.join(cur_dir, user_file)
+        # logger.info('File path_to_user_file: ' + str(path_to_user_file))
+
+        # proccessing the file by servise ocr api
+        resp_ocr = ocr_space_file(user_file, language=srv_settings['lang']['code'], isTable=srv_settings['isTable']['code'])
+        data_ocr = ocr_response_data(resp_ocr)
+        logger.info('result ocr - ocr_code: ' + str(data_ocr['ocr_code']))
+        # logger.info('result ocr - parsed_text: \n' + str(data_ocr['parsed_text']))
+
+        #remove user's file
+        try:
+            os.remove(user_file)
+            logger.info('File remove ' + str(user_file))
+        except Exception as os_remove_exception:
+            logger.warning(os_remove_exception)
+
+        if data_ocr['ocr_exit_code'] != 1:
+            logger.info('error result ocr code:' + str(data_ocr['ocr_code']))
+            await event.reply('Ooops! Something went wrong:\n{0:s}'.format(data_ocr['ocr_code']))
+        else:
+            pars_text = data_ocr['parsed_text']
+            logger.info('Length of parsed text ' + str(len(pars_text)) + ' items')
+            #reply by parsed text
+            if srv_settings['result']['code'] == 'file':
+
+                logger.info('reply by text file')
+
+                await event.respond(file='ocr_result/ocr_text.txt', message='Parsing result in this file')
+                os.remove('ocr_result/ocr_text.txt')
+            elif srv_settings['result']['code'] == 'message':
+                logger.info('reply by parsed text')
+                await event.reply('Parsed text:\n' + pars_text, buttons=menu_button_inline())
+
+
+@bot.on(events.CallbackQuery)
+async def handle_callback_query(event: events.CallbackQuery.Event):
+
+    logger.info('event.stringify: ' + str(event))
+    # msg_id = event.original_update.msg_id
+    # user_id = event.original_update.user_id
+    cb_data = event.original_update.data
+    logger.info('event cb_data: ' + str(cb_data))
+
+    if 'check_limits' in str(cb_data):
+        # logger.info('query cb cb_data: ' + str(cb_data))
+        limits_msg = settings_msg(srv_settings, limits=True)
+        # logger.info('query cb limits_msg: ' + limits_msg)
+        await event.edit(limits_msg, buttons=menu_button_inline())
+    if 'back_main_menu' in str(cb_data):
+        msg = settings_msg(srv_settings)
+        # logger.info('query cb msg: ' + msg)
+        await event.edit(msg, buttons=settings_buttons_inline())
+    elif 'set_lang' in str(cb_data):
+
+        update_msg = settings_msg(srv_settings, lang=True)
+        # logger.info('query cb update_msg: ' + update_msg)
+        await event.edit(update_msg, buttons=list_lang_btn_inline)
+
+    elif 'langcode_' in str(cb_data):
+
+        lang_code = str(cb_data)[-4:-1]
+        logger.info('query cb lang_code: ' + lang_code)
+
+        srv_settings['lang']['code'] = lang_code
+        srv_settings['lang']['desc'] = set_lang[lang_code]
+
+        logger.info('query cb settings: ' + str(srv_settings))
+        update_msg = settings_msg(srv_settings,  lang=True)
+        # logger.info('query cb update_msg: ' + update_msg)
+        await event.edit(update_msg, buttons=list_lang_btn_inline)
+
+    elif 'table' in str(cb_data):
+        srv_settings['isTable']['code'] = True
+        srv_settings['isTable']['desc'] = 'table'
+        srv_settings['update'] = True
+        update_msg = settings_msg(srv_settings)
+        # logger.info('query cb update_msg: ' + update_msg)
+        await event.edit(update_msg, buttons=settings_buttons_inline(format_txt='plain'))
+
+    elif 'plain' in str(cb_data):
+        srv_settings['isTable']['code'] = False
+        srv_settings['isTable']['desc'] = 'plain'
+        srv_settings['update'] = True
+        update_msg = settings_msg(srv_settings)
+        # logger.info('query cb update_msg: ' + update_msg)
+        await event.edit(update_msg, buttons=settings_buttons_inline(format_txt='table'))
+
+    elif 'file' in str(cb_data):
+        srv_settings['result']['code'] = 'file'
+        srv_settings['result']['desc'] = 'file'
+        srv_settings['update'] = True
+        update_msg = settings_msg(srv_settings)
+        # logger.info('query cb update_msg: ' + update_msg)
+        await event.edit(update_msg, buttons=settings_buttons_inline(result='message'))
+
+    elif 'message' in str(cb_data):
+        srv_settings['result']['code'] = 'message'
+        srv_settings['result']['desc'] = 'message'
+        srv_settings['update'] = True
+        update_msg = settings_msg(srv_settings)
+        # logger.info('query cb update_msg: ' + update_msg)
+        await event.edit(update_msg, buttons=settings_buttons_inline(result='file'))
+    logger.info('query cb settings after: ' + str(srv_settings))
+
+
+@bot.on(events.Raw)
+async def handler(update):
+    # Print all incoming updates
+    # logger.info('update.stringify: ' + update.stringify())
+    pass
 
 
 def main():
@@ -86,6 +202,7 @@ def main():
     Start the bot
     """
     bot.run_until_disconnected()
+
 
 if __name__ == "__main__":
     main()
