@@ -136,6 +136,6 @@ def menu_button_inline():
 
     footer_button = Button.inline('Main menu', data='back_main_menu')
 
-    logger.info('footer_button: {0:s}'.format(footer_button))
+    logger.info('footer_button: {!s}'.format(footer_button))
 
     return [footer_button]

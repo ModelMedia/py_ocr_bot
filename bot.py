@@ -102,21 +102,23 @@ async def rec_file(event):
             logger.warning(os_remove_exception)
 
         if data_ocr['ocr_exit_code'] != 1:
-            logger.info('error result ocr code:' + str(data_ocr['ocr_code']))
-            await event.reply('Ooops! Something went wrong:\n{0:s}'.format(data_ocr['ocr_code']))
+            logger.info('error result ocr code: {!s}'.format(data_ocr['ocr_code']))
+            await event.reply('Ooops! Something went wrong:\n{!s}'.format(data_ocr['ocr_code']))
         else:
             pars_text = data_ocr['parsed_text']
-            logger.info('Length of parsed text ' + str(len(pars_text)) + ' items')
+            logger.info('Length of parsed text {!s} items'.format(len(pars_text)))
+            # logger.info('parsed text:\n {}'.format(pars_text))
             #reply by parsed text
             if srv_settings['result']['code'] == 'file':
 
+                str_to_file(pars_text)
                 logger.info('reply by text file')
 
                 await event.respond(file='ocr_result/ocr_text.txt', message='Parsing result in this file')
                 os.remove('ocr_result/ocr_text.txt')
             elif srv_settings['result']['code'] == 'message':
-                logger.info('reply by parsed text')
-                await event.reply('Parsed text:\n' + pars_text, buttons=menu_button_inline())
+                logger.info('reply by message with parsed text')
+                await event.reply('Parsed text:\n' + pars_text)
 
 
 @bot.on(events.CallbackQuery)

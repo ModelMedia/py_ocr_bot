@@ -43,7 +43,7 @@ def ocr_space_file(filename, language='eng', isTable=False, ocrengine=1):
     try:
         with open(filename, 'rb') as f:
             r = requests.post('https://api.ocr.space/parse/image', files={filename: f}, data=payload,)
-            logger.info('response.status_code: {0:s}'.format(r.status_code))
+            logger.info('response.status_code: {!s}'.format(r.status_code))
             r.raise_for_status()
     except requests.exceptions.HTTPError as res_HTTPError:
         logger.warning('res_HTTPError: ' + str(res_HTTPError))
@@ -90,10 +90,13 @@ def ocr_response_data(response_json):
     check value response of ocr service
     """
 
-    # logger.info('input response ocr: ' + str(response_json))
+    logger.info('input response ocr: ' + str(response_json))
 
     response_data = json.loads(response_json)
-    logger.info('proccesing response_data[OCRExitCode]: {0:s}'.format(response_data['OCRExitCode']))
+    # logger.info('proccesing response_data[OCRExitCode]: ' + str(response_data))
+    logger.info('proccesing response_data: {!s}'.format(response_data))
+    # logger.info('proccesing response_data[OCRExitCode]: ' + str(response_data['OCRExitCode']))
+    logger.info('proccesing response_data[OCRExitCode]: {!s}'.format(response_data['OCRExitCode']))
 
     if response_data['OCRExitCode'] == 1:
 
