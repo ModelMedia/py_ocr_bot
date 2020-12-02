@@ -1,4 +1,5 @@
 from telethon import errors, Button
+import os
 import log_srv
 
 logger = log_srv.get_logger(__name__)
