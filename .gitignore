@@ -83,6 +83,7 @@ ipython_config.py
 
 # Telethon
 *.session
+*.session-journal
 
 # pyenv
 .python-version

@@ -25,7 +25,7 @@ list_lang_btn_inline = language_buttons_inline()
 bot = TelegramClient('bot', APP_API_ID, APP_API_HASH).start(bot_token=BOT_TOKEN)
 
 
-@bot.on(events.NewMessage(pattern='/start'))
+@bot.on(events.NewMessage(pattern='/start|/settings'))
 async def start(event):
     """Send a message wnen the command /start is issued"""
 

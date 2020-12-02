@@ -53,17 +53,14 @@ def is_file_valid(event_msg):
 
     user_file = event_msg.file
 
-    # logger.info('file.mime_type: ' + user_file.mime_type)
     logger.info('file.name: ' + user_file.name)
     logger.info('file.size: ' + str(user_file.size)) #size in bytes of this file.
 
-    try:
-        # if allowed_file_types.index(event_msg.document.mime_type):
-        if allowed_file_types.index(user_file.mime_type):
-            logger.info('file.mime_type: ' + user_file.mime_type)
-            file_type = True
-    except ValueError:
-        logger.warning(ValueError)
+    # logger.info('allowed_file_types index: ' + str(allowed_file_types.index(user_file.mime_type)))
+
+    if user_file.mime_type in allowed_file_types:
+        logger.info('user_file.mime_type in allowed_file_types: ' + user_file.mime_type)
+        file_type = True
 
     if user_file.size <= 1048576:
         file_size = True
