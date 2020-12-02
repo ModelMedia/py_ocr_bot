@@ -41,6 +41,11 @@ def ocr_space_file(filename, language='eng', isTable=False, ocrengine=1):
         }
 
     try:
+        logger.info('file {!s} exist: {!s}'.format(filename, os.path.isfile(filename)))
+    except OSError:
+        logger.warning(OSError)
+
+    try:
         with open(filename, 'rb') as f:
             r = requests.post('https://api.ocr.space/parse/image', files={filename: f}, data=payload,)
             logger.info('response.status_code: {!s}'.format(r.status_code))

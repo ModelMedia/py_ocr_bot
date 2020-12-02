@@ -6,7 +6,7 @@ from ocr import ocr_space_file, ocr_space_url, ocr_response_data
 import log_srv
 from settings import get_default_settings
 from utills import set_lang, settings_msg, settings_buttons_inline, language_buttons_inline, menu_button_inline
-from file_srv import str_to_file
+from file_srv import str_to_file, check_dir, is_file_valid
 
 load_dotenv()
 logger = log_srv.get_logger(__name__)
@@ -44,13 +44,13 @@ async def rec_file(event):
        image/gif, image/bmp, image/tiff.
         The maximum length for a message is 35,000 bytes or 4,096 characters
     """
-    allowed_file_types = ['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/bmp', 'image/tiff']
+    # allowed_file_types = ['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/bmp', 'image/tiff']
 
     logger.info('event.NewMessage')
     print(event)
 
-    e_msg = event.message
-    # msg_id = e_msg.id
+    event_msg = event.message
+    # msg_id = event_msg.id
     # logger.info('msg_id: ' + str(msg_id))
     # chat = await event.get_chat()
     # logger.info('event.chat: ' + str(chat))
@@ -58,67 +58,66 @@ async def rec_file(event):
     # logger.info('event.sender: ' + str(sender))
     # logger.info('event.chat_id: ' + str(event.chat_id))
     # logger.info('event.sender_id: ' + str(event.sender_id))
-    # user_id = e_msg.peer_id
+    # user_id = event_msg.peer_id
     # logger.info('user_id: ' + str(user_id))
     # logger.info('event_client: ' + str(event.client))
 
-    if e_msg.document:
-        logger.info('document.mime_type: ' + e_msg.document.mime_type)
+    if event_msg.document:
+        logger.info('document.mime_type: ' + event_msg.document.mime_type)
 
-    try:
-        b=allowed_file_types.index(e_msg.document.mime_type)
-    except ValueError:
-        logger.warning(ValueError)
+    # try:
+    #     b=allowed_file_types.index(event_msg.document.mime_type)
+    # except ValueError:
+    #     logger.warning(ValueError)
+        if not is_file_valid(event_msg):
 
-        await event.reply('Sorry, this file type cannot be processed\nOnly these types of files can be processed: PDF, PNG, JPG(JPEG), BMP, TIF(TIFF), GIF.\nOther limits:\nFile size limit - 1 MB. PDF page limit - 3\nLimit requests to API service - 500 calls/DAY.')
-    else:
-        await event.reply('Please, wait. Just one moment ....')
+            await event.reply('Sorry, this file type cannot be processed\nOnly these types of files can be processed: PDF, PNG, JPG(JPEG), BMP, TIF(TIFF), GIF.\nOther limits:\nFile size limit - 1 MB. PDF page limit - 3\nLimit requests to API service - 500 calls/DAY.')
 
-        if e_msg.file:
-            user_file = e_msg.file
-            logger.info('file.mime_type: ' + user_file.mime_type)
-            logger.info('file.name: ' + user_file.name)
-            logger.info('file.size: ' + str(user_file.size)) #size in bytes of this file.
-
-        user_file = await e_msg.download_media()
-        logger.info('File saved to: ' + str(user_file))
-
-        cur_dir = os.getcwd()
-        logger.info('File saved to cur_dir: ' + str(cur_dir))
-        # path_to_user_file = os.path.join(cur_dir, user_file)
-        # logger.info('File path_to_user_file: ' + str(path_to_user_file))
-
-        # proccessing the file by servise ocr api
-        resp_ocr = ocr_space_file(user_file, language=srv_settings['lang']['code'], isTable=srv_settings['isTable']['code'])
-        data_ocr = ocr_response_data(resp_ocr)
-        logger.info('result ocr - ocr_code: ' + str(data_ocr['ocr_code']))
-        # logger.info('result ocr - parsed_text: \n' + str(data_ocr['parsed_text']))
-
-        #remove user's file
-        try:
-            os.remove(user_file)
-            logger.info('File remove ' + str(user_file))
-        except Exception as os_remove_exception:
-            logger.warning(os_remove_exception)
-
-        if data_ocr['ocr_exit_code'] != 1:
-            logger.info('error result ocr code: {!s}'.format(data_ocr['ocr_code']))
-            await event.reply('Ooops! Something went wrong:\n{!s}'.format(data_ocr['ocr_code']))
         else:
-            pars_text = data_ocr['parsed_text']
-            logger.info('Length of parsed text {!s} items'.format(len(pars_text)))
-            # logger.info('parsed text:\n {}'.format(pars_text))
-            #reply by parsed text
-            if srv_settings['result']['code'] == 'file':
+            await event.reply('Please, wait. Just one moment ....')
 
-                str_to_file(pars_text)
-                logger.info('reply by text file')
+            if event_msg.file:
+                user_file = event_msg.file
+                # logger.info('file.mime_type: ' + user_file.mime_type)
+                # logger.info('file.name: ' + user_file.name)
+                # logger.info('file.size: ' + str(user_file.size)) #size in bytes of this file.
 
-                await event.respond(file='ocr_result/ocr_text.txt', message='Parsing result in this file')
-                os.remove('ocr_result/ocr_text.txt')
-            elif srv_settings['result']['code'] == 'message':
-                logger.info('reply by message with parsed text')
-                await event.reply('Parsed text:\n' + pars_text)
+            check_dir('tmp')
+
+            user_file = await event_msg.download_media(file='tmp/' + user_file.name)
+            logger.info('File saved to: ' + str(user_file))
+
+            # proccessing the file by servise ocr api
+            resp_ocr = ocr_space_file(user_file, language=srv_settings['lang']['code'], isTable=srv_settings['isTable']['code'])
+            data_ocr = ocr_response_data(resp_ocr)
+            logger.info('result ocr - ocr_code: ' + str(data_ocr['ocr_code']))
+            # logger.info('result ocr - parsed_text: \n' + str(data_ocr['parsed_text']))
+
+            #remove user's file
+            try:
+                os.remove(user_file)
+                logger.info('File remove ' + str(user_file))
+            except Exception as os_remove_exception:
+                logger.warning(os_remove_exception)
+
+            if data_ocr['ocr_exit_code'] != 1:
+                logger.info('error result ocr code: {!s}'.format(data_ocr['ocr_code']))
+                await event.reply('Ooops! Something went wrong:\n{!s}'.format(data_ocr['ocr_code']))
+            else:
+                pars_text = data_ocr['parsed_text']
+                logger.info('Length of parsed text {!s} items'.format(len(pars_text)))
+                # logger.info('parsed text:\n {}'.format(pars_text))
+                #reply by parsed text
+                if srv_settings['result']['code'] == 'file':
+
+                    str_to_file(pars_text)
+                    logger.info('reply by text file')
+
+                    await event.respond(file='tmp/ocr_text.txt', message='Parsing result in this file')
+                    os.remove('tmp/ocr_text.txt')
+                elif srv_settings['result']['code'] == 'message':
+                    logger.info('reply by message with parsed text')
+                    await event.reply('Parsed text:\n' + pars_text)
 
 
 @bot.on(events.CallbackQuery)
