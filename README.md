@@ -55,6 +55,7 @@ To use the bot, type:
 /start
 ```
 You can change the text recognition settings: text language (24 languages are supported), content format - plain text or table, recognition result - message or text file. You can change these settings using the inline menu buttons.
+You can change these settings during use by calling the command "/settings"
 
 Please note: The bot could be slow sometimes as it depends on OCR.space's API requests.
 
