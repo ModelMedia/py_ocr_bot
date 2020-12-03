@@ -19,6 +19,7 @@
 + [Demo / Working](#demo)
 + [How it works](#working)
 + [Usage](#usage)
++ [Roadmap](#roadmap)
 + [Built Using](#built_using)
 + [Authors](#authors)
 + [License](#license)
@@ -56,6 +57,11 @@ To use the bot, type:
 You can change the text recognition settings: text language (24 languages are supported), content format - plain text or table, recognition result - message or text file. You can change these settings using the inline menu buttons.
 
 Please note: The bot could be slow sometimes as it depends on OCR.space's API requests.
+
+## ⛏️ Roadmap <a name = "roadmap"></a>
+1. Add the ability to process files by URL
+2. Anti-flood protection
+2. Refactoring
 
 ## ⛏️ Built Using <a name = "built_using"></a>
 + [Telethon](https://github.com/LonamiWebs/Telethon) - Telethon is an asyncio Python 3 MTProto library to interact with Telegram's API as a user or through a bot account (bot API alternative).
