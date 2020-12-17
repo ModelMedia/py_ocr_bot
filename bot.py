@@ -12,9 +12,9 @@ load_dotenv()
 logger = log_srv.get_logger(__name__)
 # logger.warning()
 
-BOT_TOKEN = os.getenv('BOT_TOKEN')
-APP_API_ID = os.getenv('APP_API_ID')
-APP_API_HASH = os.getenv('APP_API_HASH')
+BOT_TOKEN = os.getenv('1441556191:AAE7UgTUJB2vpToDpGWCPh-KKzjc1Taep8g')
+APP_API_ID = os.getenv('2474270')
+APP_API_HASH = os.getenv('d6c0a53a212d5cd76afd69a48a9d80f8')
 
 srv_settings = get_default_settings()
 logger.info('default srv_settings: ' + str(srv_settings))
