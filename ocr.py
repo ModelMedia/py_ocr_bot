@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 logger = log_srv.get_logger(__name__)
-OCR_API = os.getenv('OCR_API')
+OCR_API = os.getenv('e405557a0a88957')
 
 url_api = 'https://api.ocr.space/parse/image'
 
